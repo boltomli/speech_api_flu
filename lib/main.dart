@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart'
     show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
@@ -12,16 +13,25 @@ void main() {
 }
 
 const regions = const [
-  const Region('Southeast Asia', 'https://southeastasia.tts.speech.microsoft.com/cognitiveservices/voices/list', 'https://southeastasia.api.cognitive.microsoft.com/sts/v1.0/issueToken'),
-  const Region('West US', 'https://westus.tts.speech.microsoft.com/cognitiveservices/voices/list', 'https://westus.api.cognitive.microsoft.com/sts/v1.0/issueToken'),
+  const Region(
+    'Southeast Asia',
+    'https://southeastasia.tts.speech.microsoft.com/cognitiveservices/voices/list',
+    'https://southeastasia.api.cognitive.microsoft.com/sts/v1.0/issueToken',
+    'southeastasia'),
+  const Region(
+    'West US',
+    'https://westus.tts.speech.microsoft.com/cognitiveservices/voices/list',
+    'https://westus.api.cognitive.microsoft.com/sts/v1.0/issueToken',
+    'westus'),
 ];
 
 class Region {
   final String regionName;
   final String voiceListUrl;
   final String authUrl;
+  final String region;
 
-  const Region(this.regionName, this.voiceListUrl, this.authUrl);
+  const Region(this.regionName, this.voiceListUrl, this.authUrl, this.region);
 }
 
 class MyApp extends StatelessWidget {
@@ -32,7 +42,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Home Page'),
+      home: MyHomePage(title: 'Available voices per region'),
     );
   }
 }
@@ -48,13 +58,12 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   Region _selectedRegion = regions.first;
-  String _text = "";
+  List<dynamic> _voicesList = [];
 
   @override
   void initState() {
     super.initState();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +83,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget> [
+          children: [
             Text(
               'Selected region:',
             ),
@@ -91,7 +100,10 @@ class _MyHomePageState extends State<MyHomePage> {
               'Available voices:',
             ),
             Expanded(
-              child: Text(_text),
+              child: ListView(
+                shrinkWrap: true,
+                children: _voicesList.map((voice) => Text(voice.toString())).toList(),
+              ),
             ),
           ],
         ),
@@ -110,24 +122,54 @@ class _MyHomePageState extends State<MyHomePage> {
   void _selectRegionHandler(Region region) {
     setState(() {
       _selectedRegion = region;
-      String token = '';
-      dio.post<String>(_selectedRegion.authUrl,
-        options: Options(
-          headers: {
-            'Ocp-Apim-Subscription-Key':'my key (actually this should be different per region)',
-          },
-          responseType: ResponseType.plain
-        )).then((r) {
-          token = r.data;
-          dio.get<String>(_selectedRegion.voiceListUrl,
-            options: Options(
-              headers: {
-                'Authorization':'Bearer '+token,
-              }
-            )).then((r) {
-              _text = r.data;
-          }).catchError(print);
-        }).catchError(print);
+      fetchKey(_selectedRegion.region).then((key) {
+        fetchToken(key).then((token) {
+          getVoicesList(token).then((voicesList) {
+            _voicesList = voicesList;
+          });
+        });
+      });
     });
+  }
+
+  Future<String> fetchKey(String region) async {
+    // The key should be stored safely.
+    // Suggest get key from server, not exposed to client.
+    return 'dummy key';
+  }
+
+  Future<String> fetchToken(String key) async {
+    // The key should be stored safely.
+    // Suggest manage token getter on server.
+    // This is just a demo and not recommended.
+    String token = '';
+    Response response = await dio.post<String>(
+      _selectedRegion.authUrl,
+      options: Options(
+        headers: {
+          'Ocp-Apim-Subscription-Key':key,
+        },
+        responseType: ResponseType.plain
+      )
+    );
+    if (response.statusCode == 200) {
+      token = response.data;
+    }
+    return token;
+  }
+
+  Future<List<dynamic>> getVoicesList(String token) async {
+    List<dynamic> voicesList = [];
+    Response response = await dio.get<String>(_selectedRegion.voiceListUrl,
+      options: Options(
+        headers: {
+          'Authorization':'Bearer '+token,
+        }
+      )
+    );
+    if (response.statusCode == 200) {
+      voicesList = json.decode(response.data);
+    }
+    return voicesList;
   }
 }
