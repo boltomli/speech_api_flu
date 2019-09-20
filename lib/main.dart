@@ -83,7 +83,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   Region _selectedRegion = regions.first;
   String _voiceListJson = '[{"Name":"Full name of the voice", "ShortName":"Short name of the voice", "Gender":"Female or Male", "Locale":"Two letter language and region code"}]';
-  List<Voice> _voiceList = [];
+  List<dynamic> _voiceList = [];
 
   @override
   void initState() {
@@ -118,41 +118,43 @@ class _MyHomePageState extends State<MyHomePage> {
             Text(
               'Available voices:',
             ),
-            JsonTable(
-              jsonDecode(_voiceListJson),
-              tableHeaderBuilder: (String header) {
-                return Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 8.0, vertical: 4.0),
-                  decoration: BoxDecoration(
-                      border: Border.all(width: 0.5),
-                      color: Colors.grey[300]),
-                  child: Text(
-                    header,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.display1.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14.0,
-                        color: Colors.black87),
-                  ),
-                );
-              },
-              tableCellBuilder: (value) {
-                return Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 4.0, vertical: 2.0),
-                  decoration: BoxDecoration(
-                      border: Border.all(
-                          width: 0.5,
-                          color: Colors.grey.withOpacity(0.5))),
-                  child: Text(
-                    value,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.display1.copyWith(
-                        fontSize: 14.0, color: Colors.grey[900]),
-                  ),
-                );
-              },
+            Expanded(
+              child: JsonTable(
+                jsonDecode(_voiceListJson),
+                tableHeaderBuilder: (String header) {
+                  return Container(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 8.0, vertical: 4.0),
+                    decoration: BoxDecoration(
+                        border: Border.all(width: 0.5),
+                        color: Colors.grey[300]),
+                    child: Text(
+                      header,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.display1.copyWith(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14.0,
+                          color: Colors.black87),
+                    ),
+                  );
+                },
+                tableCellBuilder: (value) {
+                  return Container(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 4.0, vertical: 2.0),
+                    decoration: BoxDecoration(
+                        border: Border.all(
+                            width: 0.5,
+                            color: Colors.grey.withOpacity(0.5))),
+                    child: Text(
+                      value,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.display1.copyWith(
+                          fontSize: 14.0, color: Colors.grey[900]),
+                    ),
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -175,7 +177,7 @@ class _MyHomePageState extends State<MyHomePage> {
         fetchToken(key).then((token) {
           getVoiceListJson(token).then((voiceListJson) {
             _voiceListJson = voiceListJson;
-            _voiceList = json.decode(voiceListJson).map((v) => new Voice.fromJson(v)).toList();
+            _voiceList = jsonDecode(voiceListJson).map((v) => new Voice.fromJson(v)).toList();
           });
         });
       });
@@ -184,8 +186,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<String> fetchKey(String region) async {
     // The key should be stored safely.
-    // Suggest manage token getter on server.
+    // Suggest manage token (but not key) getter on server.
     // This is just a demo and not recommended.
+    // Also, key may be related to region.
     String key = '';
     Response response = await dio.get<String>(
       'http://localhost:8000',
