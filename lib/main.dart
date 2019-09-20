@@ -82,8 +82,8 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   Region _selectedRegion = regions.first;
-  List<dynamic> _voiceList = [];
-  String _voiceListJson = '';
+  String _voiceListJson = '[{"Name":"Full name of the voice", "ShortName":"Short name of the voice", "Gender":"Female or Male", "Locale":"Two letter language and region code"}]';
+  List<Voice> _voiceList = [];
 
   @override
   void initState() {
