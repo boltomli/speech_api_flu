@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart'
     show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:json_table/json_table.dart';
 import 'http.dart';
 
 void main() {
@@ -47,6 +48,14 @@ class Voice {
     shortName = json['ShortName'],
     gender = json['Gender'],
     locale = json['Locale'];
+
+  Map<String, dynamic> toJson() =>
+    <String, dynamic>{
+      'Name': name,
+      'ShortName': shortName,
+      'Gender': gender,
+      'Locale': locale,
+    };
 }
 
 class MyApp extends StatelessWidget {
@@ -73,7 +82,8 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   Region _selectedRegion = regions.first;
-  List<Voice> _voiceList = [];
+  List<dynamic> _voiceList = [];
+  String _voiceListJson = '';
 
   @override
   void initState() {
@@ -93,32 +103,56 @@ class _MyHomePageState extends State<MyHomePage> {
           )
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.all(8.0),
+      body: Container(
+        padding: EdgeInsets.all(16.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Selected region:',
+              'Selected region: ${_selectedRegion.regionName}',
             ),
             Text(
-              '${_selectedRegion.regionName}\n',
-            ),
-            Text(
-              'URL for list of available voices:',
-            ),
-            Text(
-              '${_selectedRegion.voiceListUrl}\n',
+              'URL for list of available voices: ${_selectedRegion.voiceListUrl}',
             ),
             Text(
               'Available voices:',
             ),
-            Expanded(
-              child: ListView(
-                shrinkWrap: true,
-                children: _voiceList.map((voice) => Text(voice.name)).toList(),
-              ),
+            JsonTable(
+              jsonDecode(_voiceListJson),
+              tableHeaderBuilder: (String header) {
+                return Container(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 8.0, vertical: 4.0),
+                  decoration: BoxDecoration(
+                      border: Border.all(width: 0.5),
+                      color: Colors.grey[300]),
+                  child: Text(
+                    header,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.display1.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.0,
+                        color: Colors.black87),
+                  ),
+                );
+              },
+              tableCellBuilder: (value) {
+                return Container(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 4.0, vertical: 2.0),
+                  decoration: BoxDecoration(
+                      border: Border.all(
+                          width: 0.5,
+                          color: Colors.grey.withOpacity(0.5))),
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.display1.copyWith(
+                        fontSize: 14.0, color: Colors.grey[900]),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -139,8 +173,9 @@ class _MyHomePageState extends State<MyHomePage> {
       _selectedRegion = region;
       fetchKey(_selectedRegion.region).then((key) {
         fetchToken(key).then((token) {
-          getVoiceList(token).then((voiceList) {
-            _voiceList = voiceList;
+          getVoiceListJson(token).then((voiceListJson) {
+            _voiceListJson = voiceListJson;
+            _voiceList = json.decode(voiceListJson).map((v) => new Voice.fromJson(v)).toList();
           });
         });
       });
@@ -184,8 +219,8 @@ class _MyHomePageState extends State<MyHomePage> {
     return token;
   }
 
-  Future<List<Voice>> getVoiceList(String token) async {
-    List<Voice> voicesList = [];
+  Future<String> getVoiceListJson(String token) async {
+    String voiceListJson = '';
     Response response = await dio.get<String>(_selectedRegion.voiceListUrl,
       options: Options(
         headers: {
@@ -194,9 +229,8 @@ class _MyHomePageState extends State<MyHomePage> {
       )
     );
     if (response.statusCode == 200) {
-      List responseJson = json.decode(response.data);
-      voicesList = responseJson.map((v) => new Voice.fromJson(v)).toList();
+      voiceListJson = response.data;
     }
-    return voicesList;
+    return voiceListJson;
   }
 }
