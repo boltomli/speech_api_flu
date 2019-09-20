@@ -34,6 +34,21 @@ class Region {
   const Region(this.regionName, this.voiceListUrl, this.authUrl, this.region);
 }
 
+class Voice {
+  final String name;
+  final String shortName;
+  final String gender;
+  final String locale;
+
+  Voice(this.name, this.shortName, this.gender, this.locale);
+
+  Voice.fromJson(Map<String, dynamic> json) :
+    name = json['Name'],
+    shortName = json['ShortName'],
+    gender = json['Gender'],
+    locale = json['Locale'];
+}
+
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -58,7 +73,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   Region _selectedRegion = regions.first;
-  List<dynamic> _voicesList = [];
+  List<Voice> _voiceList = [];
 
   @override
   void initState() {
@@ -102,7 +117,7 @@ class _MyHomePageState extends State<MyHomePage> {
             Expanded(
               child: ListView(
                 shrinkWrap: true,
-                children: _voicesList.map((voice) => Text(voice.toString())).toList(),
+                children: _voiceList.map((voice) => Text(voice.name)).toList(),
               ),
             ),
           ],
@@ -124,8 +139,8 @@ class _MyHomePageState extends State<MyHomePage> {
       _selectedRegion = region;
       fetchKey(_selectedRegion.region).then((key) {
         fetchToken(key).then((token) {
-          getVoicesList(token).then((voicesList) {
-            _voicesList = voicesList;
+          getVoiceList(token).then((voiceList) {
+            _voiceList = voiceList;
           });
         });
       });
@@ -134,8 +149,19 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<String> fetchKey(String region) async {
     // The key should be stored safely.
-    // Suggest get key from server, not exposed to client.
-    return 'dummy key';
+    // Suggest manage token getter on server.
+    // This is just a demo and not recommended.
+    String key = '';
+    Response response = await dio.get<String>(
+      'http://localhost:8000',
+      options: Options(
+        responseType: ResponseType.plain
+      )
+    );
+    if (response.statusCode == 200) {
+      key = response.data;
+    }
+    return key;
   }
 
   Future<String> fetchToken(String key) async {
@@ -158,8 +184,8 @@ class _MyHomePageState extends State<MyHomePage> {
     return token;
   }
 
-  Future<List<dynamic>> getVoicesList(String token) async {
-    List<dynamic> voicesList = [];
+  Future<List<Voice>> getVoiceList(String token) async {
+    List<Voice> voicesList = [];
     Response response = await dio.get<String>(_selectedRegion.voiceListUrl,
       options: Options(
         headers: {
@@ -168,7 +194,8 @@ class _MyHomePageState extends State<MyHomePage> {
       )
     );
     if (response.statusCode == 200) {
-      voicesList = json.decode(response.data);
+      List responseJson = json.decode(response.data);
+      voicesList = responseJson.map((v) => new Voice.fromJson(v)).toList();
     }
     return voicesList;
   }
